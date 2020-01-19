@@ -6,7 +6,7 @@ import (
 	"github.com/swerveaux/simtelemetry/internal/server"
 )
 
-const port = 8081
+const port = 8080
 
 func main() {
 	fmt.Println("Starting server")
