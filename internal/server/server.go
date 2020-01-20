@@ -7,8 +7,8 @@ import (
 )
 
 // Run takes a port number and starts listening on that port.
-func Run(port int) error {
-	pc, err := net.ListenPacket("udp", "0.0.0.0:" + strconv.Itoa(port))
+func Run(port int, ch chan []byte) error {
+	pc, err := net.ListenPacket("udp", "0.0.0.0:"+strconv.Itoa(port))
 	if err != nil {
 		return err
 	}
@@ -22,9 +22,9 @@ func Run(port int) error {
 			fmt.Printf("Got error: %v\n", err)
 			return err
 		}
-		fmt.Printf("Received %d bytes from %v\n", numBytes, addr)
+		fmt.Printf("Received %d bytes from %v: %v\n", numBytes, addr, buffer[:numBytes])
+		ch <- buffer[:numBytes]
 	}
 
 	return nil
 }
-
