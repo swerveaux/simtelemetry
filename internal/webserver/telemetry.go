@@ -16,7 +16,7 @@ type Telemetry struct {
 
 	VelocityX float32 `json:"velocity_x"` // In the car's local space; X = right, Y = up, Z = forward
 	VelocityY float32 `json:"velocity_y"`
-	VelocityZ float32 `json:"velocity_z`
+	VelocityZ float32 `json:"velocity_z"`
 
 	AngularVelocityX float32 `json:"angular_velocity_x"` // In the car's local space; X = pitch, Y = yaw, Z = roll
 	AngularVelocityY float32 `json:"angular_velocity_y"`
