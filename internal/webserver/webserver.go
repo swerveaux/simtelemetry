@@ -15,12 +15,12 @@ import (
 )
 
 type SocketCollection struct {
-	Sockets    map[string]chan []byte
+	Sockets    map[string]chan Telemetry
 	IncomingCh chan []byte
 	mu         sync.Mutex
 }
 
-func (s *SocketCollection) AddSocket(id string, ch chan []byte) {
+func (s *SocketCollection) AddSocket(id string, ch chan Telemetry) {
 	s.mu.Lock()
 	s.Sockets[id] = ch
 	s.mu.Unlock()
@@ -33,19 +33,20 @@ func (s *SocketCollection) RemoveSocket(id string) {
 	s.mu.Unlock()
 }
 
-func (s *SocketCollection) Fanout(msg []byte) {
-	for _, socket := range s.Sockets {
-		socket <- msg
-	}
-}
-
 func NewSocketCollection(ch chan []byte) *SocketCollection {
 	s := SocketCollection{IncomingCh: ch}
-	s.Sockets = make(map[string]chan []byte)
+	s.Sockets = make(map[string]chan Telemetry)
+	var rpm Telemetry
 	go func() {
 		for msg := range ch {
+			r := bytes.NewReader(msg)
+			err := binary.Read(r, binary.LittleEndian, &rpm)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
 			for _, socket := range s.Sockets {
-				socket <- msg
+				socket <- rpm
 			}
 		}
 	}()
@@ -66,16 +67,9 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
-type RPM struct {
-	MaxRPM     float32
-	IdleRPM    float32
-	CurrentRPM float32
-}
-
 func websocketHandler(s *SocketCollection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ch := make(chan []byte)
-		var rpm RPM
+		ch := make(chan Telemetry)
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			log.Println(err)
@@ -90,14 +84,7 @@ func websocketHandler(s *SocketCollection) http.HandlerFunc {
 		for msg := range ch {
 			//irpm := binary.LittleEndian.Uint32(msg[16:20])
 			// rpm := math.Float32frombits(irpm)
-			reader := bytes.NewReader(msg[8:20])
-			err = binary.Read(reader, binary.LittleEndian, &rpm)
-			if err != nil {
-				_ = conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("Failed marshaling struct: %v", err)))
-				return
-			}
-
-			err = conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("RPM: %f", rpm.CurrentRPM)))
+			err = conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("RPM: %f", msg.CurrentEngineRpm)))
 
 			if err != nil {
 				s.RemoveSocket(u.String())
