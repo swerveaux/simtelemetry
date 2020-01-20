@@ -1,6 +1,8 @@
 package webserver
 
 import (
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"log"
 	"net/http"
@@ -64,9 +66,16 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
+type RPM struct {
+	MaxRPM     float32
+	IdleRPM    float32
+	CurrentRPM float32
+}
+
 func websocketHandler(s *SocketCollection) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ch := make(chan []byte)
+		var rpm RPM
 		conn, err := upgrader.Upgrade(w, r, nil)
 		if err != nil {
 			log.Println(err)
@@ -79,7 +88,17 @@ func websocketHandler(s *SocketCollection) http.HandlerFunc {
 		}
 		s.AddSocket(u.String(), ch)
 		for msg := range ch {
-			err = conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("%v", msg)))
+			//irpm := binary.LittleEndian.Uint32(msg[16:20])
+			// rpm := math.Float32frombits(irpm)
+			reader := bytes.NewReader(msg[8:20])
+			err = binary.Read(reader, binary.LittleEndian, &rpm)
+			if err != nil {
+				_ = conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("Failed marshaling struct: %v", err)))
+				return
+			}
+
+			err = conn.WriteMessage(websocket.TextMessage, []byte(fmt.Sprintf("RPM: %f", rpm.CurrentRPM)))
+
 			if err != nil {
 				s.RemoveSocket(u.String())
 				return
