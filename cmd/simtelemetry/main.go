@@ -5,10 +5,9 @@ import (
 	"os"
 	"sync"
 
-	"github.com/swerveaux/simtelemetry/internal/webserver"
-
-	"github.com/swerveaux/simtelemetry/internal/server"
 	flag "github.com/spf13/pflag"
+	"github.com/swerveaux/simtelemetry/internal/server"
+	"github.com/swerveaux/simtelemetry/internal/webserver"
 )
 
 type Config struct {

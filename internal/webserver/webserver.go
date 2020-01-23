@@ -29,8 +29,9 @@ func (s *SocketCollection) AddSocket(id string, ch chan []byte) {
 
 func (s *SocketCollection) RemoveSocket(id string) {
 	s.mu.Lock()
-	close(s.Sockets[id])
+	socket := s.Sockets[id]
 	delete(s.Sockets, id)
+	close(socket)
 	s.mu.Unlock()
 }
 
